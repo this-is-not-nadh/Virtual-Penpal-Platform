@@ -1,27 +1,36 @@
-    import './App.css';
-    import { useState } from 'react';
+import { useState } from 'react';
+import './App.css';
 
 // The main App component handles the state of the landing page,
-// switching between the initial message and the login form.
+// switching between the initial message, the login form, and the logged-in view.
 export default function App() {
   const [showLoginForm, setShowLoginForm] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Forces the user to log in every single time
 
   // This function is called when the "I have the password!" button is clicked.
-  const handleButtonClick = () => {
+  function handleButtonClick() {
     setShowLoginForm(true);
+  }
+
+  // This function is called by the LoginForm component upon successful login.
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true);
   };
 
+  // Conditionally render the appropriate view based on the app's state.
   return (
     <div className="main-container">
       {/* Container for the content, centered on the page. */}
       <div className="card-container">
-        {/*
-          Conditionally render either the initial message card or the login form card.
-          The transition from one to the other is a simple fade.
-        */}
-        {showLoginForm ? (
-          <LoginForm />
+        {isLoggedIn ? (
+          // If the user is logged in, bring them to the main content
+          <LoggedInView />
+        ) : showLoginForm ? (
+          // If the login form is requested, show it.
+          // The onLoginSuccess prop is passed here.
+          <LoginForm onLoginSuccess={handleLoginSuccess} />
         ) : (
+          // Otherwise, show the initial message.
           <InitialMessage onButtonClick={handleButtonClick} />
         )}
       </div>
@@ -57,9 +66,36 @@ function InitialMessage({ onButtonClick }) {
 }
 
 // LoginForm component for the username and password inputs.
-function LoginForm() {
+function LoginForm({ onLoginSuccess }) {
+  // State variables for the username, password, and error messages.
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Hardcoded credentials (placeholder for now; might be permanent if I'm lazy to set up the necessary security protocols)
+  const validCredentials = [
+    { username: 'Q38', password: 'Sunshine' },
+    { username: 'Q09', password: 'Moonlight' }
+  ];
+
+  // Handles the login button click.
+  const handleLogin = (e) => {
+    e.preventDefault(); // Prevents the default form submission behavior.
+
+    // Check if the entered credentials match the hardcoded values.
+    const isValid = validCredentials.some(
+      (credential) => credential.username === username && credential.password === password
+    );
+
+    if (isValid) {
+      onLoginSuccess();
+    } else {
+      setErrorMessage('Haha nice try, buddy!');
+    }
+  };
+
   return (
-    <div className="content-card-left">
+    <form className="content-card-left animate-fadeIn" onSubmit={handleLogin}>
       <h2 className="card-heading">
         We'll see about that.
       </h2>
@@ -69,13 +105,25 @@ function LoginForm() {
       <input
         type="text"
         placeholder="Username"
-        className="input-field mb-4"
+        className="input-field"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        aria-label="Username"
       />
       <input
         type="password"
         placeholder="Password"
-        className="input-field mb-6"
+        className="input-field"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        aria-label="Password"
       />
+      {/* Display error message if wrong credentials */}
+      {errorMessage && (
+        <p className="error-message">
+          {errorMessage}
+        </p>
+      )}
       <div className="centered-button">
         <button
           type="submit"
@@ -84,6 +132,21 @@ function LoginForm() {
           Login
         </button>
       </div>
+    </form>
+  );
+}
+
+
+// Logged In Placeholder
+function LoggedInView() {
+  return (
+    <div className="content-card-left animate-fadeIn">
+      <h2 className="card-heading">
+        Welcome, friend.
+      </h2>
+      <p className="card-paragraph">
+        You've found the secret part of the website! There's not much here yet, but you're in.
+      </p>
     </div>
   );
 }

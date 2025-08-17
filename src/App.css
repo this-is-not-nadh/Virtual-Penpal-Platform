@@ -17,7 +17,7 @@ body {
 
 /* Styles the main card container that holds the content. */
 .card-container {
-  background-color: #f1f5f9; /* Corresponds to bg-slate-100 */
+  background-color: #f1f5f9; 
   padding: 2rem; 
   margin: 1rem; 
   border-radius: 0.75rem; 
@@ -121,6 +121,16 @@ body {
 
 .input-field::placeholder {
   color: #64748b; 
+}
+
+/* Error Message Styling */
+.error-message {
+  color: #ef4444; 
+  font-weight: bold; 
+  font-size: 0.9rem; 
+  margin-top: 0.35rem; 
+  margin-bottom: 1rem; 
+  font-style: italic;
 }
 
 
