@@ -1,0 +1,135 @@
+/*
+ * This file contains the styles for the Penpal website,
+ * using classic CSS properties.
+ */
+
+/* Sets the base styles for the body and root container. */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #c6e1e9;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+/* Styles the main card container that holds the content. */
+.card-container {
+  background-color: #f1f5f9; /* Corresponds to bg-slate-100 */
+  padding: 2rem; 
+  margin: 1rem; 
+  border-radius: 0.75rem; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
+  width: 100%;
+  max-width: 24rem;
+}
+
+/* Styles for the message card and login form card content. */
+.content-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Heading */
+.card-heading {
+  font-size: 1.3rem; 
+  font-weight: 600; 
+  color: #334155; 
+  margin-bottom: 0.1rem; 
+}
+
+
+/* Paragraph */
+.card-paragraph {
+  font-size: 0.875rem; 
+  color: #475569; 
+  margin-bottom: 1.5rem;
+}
+
+
+/* Warning Button */
+.centered-button {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.message-button {
+  background-color: #295d6b; 
+  color: white;
+  font-weight: 500; 
+  padding: 0.75rem 1.5rem; 
+  border-radius: 0.5rem; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.2s;
+}
+
+.message-button:hover {
+  background-color: rgb(47, 59, 75); 
+}
+
+.message-button:focus {
+  outline: 2px solid #94a3b8; 
+}
+
+/* Icon Styling */
+.centered-icon {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem; 
+  color: #3b485a;
+}
+
+.icon-svg {
+  width: 5rem; 
+  height: 5rem; 
+}
+
+
+/* Styles for the login button. */
+.login-button {
+  background-color: #295d6b; 
+  color: white;
+  font-weight: 500; 
+  padding: 0.75rem 1.5rem; 
+  border-radius: 0.5rem; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.2s;
+}
+
+.login-button:hover {
+  background-color: rgb(47, 59, 75);
+}
+
+/* Styles for the input fields. */
+.input-field {
+  width: 100%;
+  background-color: #e0f2f7; 
+  padding: 0.75rem 0.5rem; 
+  border-radius: 0.5rem; 
+  color: #334155; 
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+  margin-bottom: 1rem;
+}
+
+.input-field::placeholder {
+  color: #64748b; 
+}
+
+
+/* Transitions */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-in-out;
+}
