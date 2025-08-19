@@ -1,11 +1,163 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import './MainMenu.css';
+import SendMail from './SendMail';
+import Inbox from './Inbox';
 import './MainMenu.css';
 
 export default function MainMenu({ currentUser }) {
+  const [hoveredComponent, setHoveredComponent] = useState(null);
+  const [clickedComponent, setClickedComponent] = useState(null);
+  const [showSendMail, setShowSendMail] = useState(false);
+  const [showInbox, setShowInbox] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    checkUnreadMessages();
+    const interval = setInterval(checkUnreadMessages, 5000); // Check every 5 seconds
+    return () => clearInterval(interval);
+  }, [currentUser.username]);
+
+  // Check unread messages count
+  const checkUnreadMessages = () => {
+    try {
+      const allMails = JSON.parse(localStorage.getItem('mailbox_messages') || '[]');
+      const unreadMails = allMails.filter(mail => 
+        mail.to === currentUser.username && !mail.isRead
+      );
+      setUnreadCount(unreadMails.length);
+    } catch (error) {
+      console.error('Error checking unread messages:', error);
+    }
+  };
+
+  // Handle mouse enter for showing options
+  const handleMouseEnter = (component) => {
+    if (!clickedComponent) {
+      setHoveredComponent(component);
+    }
+  };
+
+  // Handle mouse leave for hiding options
+  const handleMouseLeave = () => {
+    if (!clickedComponent) {
+      setHoveredComponent(null);
+    }
+  };
+
+  // Handle click for showing/hiding options
+  const handleClick = (component) => {
+    if (clickedComponent === component) {
+      // If same component is clicked, hide the menu
+      setClickedComponent(null);
+      setHoveredComponent(null);
+    } else {
+      // Show menu for clicked component
+      setClickedComponent(component);
+      setHoveredComponent(component);
+    }
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (clickedComponent && !event.target.closest('.hover-component')) {
+        setClickedComponent(null);
+        setHoveredComponent(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [clickedComponent]);
+
+  // Handle option clicks
+  const handleOptionClick = (action, component) => {
+    console.log(`Action: ${action} on ${component}`);
+    // Close the menu after selecting an option
+    setClickedComponent(null);
+    setHoveredComponent(null);
+
+    switch(action) {
+      case 'send':
+        setShowSendMail(true);
+        break;
+      case 'check':
+        setShowInbox(true);
+        break;
+    }
+  };
+
+  // Handle send mail success
+  const handleSendMailSuccess = (mailData) => {
+    console.log('Mail sent:', mailData);
+  };
+
+  // Handle close modals
+  const handleCloseSendMail = () => {
+    setShowSendMail(false);
+  };
+
+  const handleCloseInbox = () => {
+    setShowInbox(false);
+    // Refresh unread count after closing inbox
+    checkUnreadMessages();
+  };
+
+  // Render options menu
+  const renderOptionsMenu = (component) => {
+    const isVisible = hoveredComponent === component || clickedComponent === component;
+    if (!isVisible) return null;
+
+    let options = [];
+    
+    switch(component) {
+      case 'mail-slot':
+        options = [
+          { label: 'Send Mail', action: 'send' },
+        ];
+        break;
+      case 'mail-section':
+        options = [
+          { label: 'Check Mail', action: 'check' },
+        ];
+        break;
+    }
+
+    return (
+      <div className={`options-menu ${clickedComponent === component ? 'clicked' : ''}`}>
+        {options.map((option, index) => (
+          <button
+            key={index}
+            className="option-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOptionClick(option.action, component);
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+// Render unread notification badge
+  const renderUnreadBadge = () => {
+    if (unreadCount === 0) return null;
+    
+    return (
+      <div className="unread-badge">
+        {unreadCount > 99 ? '99+' : unreadCount}
+      </div>
+    );
+  };
+
+
   // Checks the user with 'if' statements.
   if (currentUser.username === 'Q38') {
     return (
-      // View for user Q38
+    <>
+      {/* View for user Q38 */}
       <div className="q38-main-container">
         <div className="instruction-text">
           {/* Write Up */}
@@ -16,23 +168,58 @@ export default function MainMenu({ currentUser }) {
         <div className="mailbox-container">
           {/* Mailbox Curve */}
           <div className="mailbox-top"></div>
+          
           {/* Mailbox Body */}
           <div className="mailbox-body">
             {/* Mail Slot */}
-            <div className="mail-slot"></div>
-            {/* Mail Section */}
-            <div className="mail-section">
-              <h2 className="mail-text">MAIL</h2>
+            <div 
+              className="mail-slot hover-component"
+              onMouseEnter={() => handleMouseEnter('mail-slot')}
+              onMouseLeave={handleMouseLeave}
+              onClick={() => handleClick('mail-slot')}
+            >
+              {renderOptionsMenu('mail-slot')}
             </div>
+            
+            {/* Mail Section */}
+            <div 
+              className="mail-section hover-component"
+              onMouseEnter={() => handleMouseEnter('mail-section')}
+              onMouseLeave={handleMouseLeave}
+              onClick={() => handleClick('mail-section')}
+            >
+              <h2 className="mail-text">MAIL</h2>
+              {renderOptionsMenu('mail-section')}
+            </div>
+            
+            {renderOptionsMenu('mailbox-body')}
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+        {showSendMail && (
+          <SendMail 
+            currentUser={currentUser}
+            onClose={handleCloseSendMail}
+            onSend={handleSendMailSuccess}
+          />
+        )}
+        
+        {showInbox && (
+          <Inbox 
+            currentUser={currentUser}
+            onClose={handleCloseInbox}
+          />
+        )}
+    </>
     );
   }
  
   else {
     return (
-      // View for user Q09
+      <>
+      {/* View for user Q09 */}
       <div className="q09-main-container">
         <div className="instruction-text">
           {/* Write Up */}
@@ -41,21 +228,53 @@ export default function MainMenu({ currentUser }) {
           </p>
         </div>
         <div className="mailbox-container">
-          {/* Mailbox Top (Curved) */}
+          {/* Mailbox Curve */}
           <div className="mailbox-top"></div>
-         
+          
           {/* Mailbox Body */}
-          <div className="mailbox-body">
+          <div 
+            className="mailbox-body">
+
             {/* Mail Slot */}
-            <div className="mail-slot"></div>
-           
+            <div 
+              className="mail-slot hover-component"
+              onMouseEnter={() => handleMouseEnter('mail-slot')}
+              onMouseLeave={handleMouseLeave}
+              onClick={() => handleClick('mail-slot')}
+            >
+              {renderOptionsMenu('mail-slot')}
+            </div>
+            
             {/* Mail Section */}
-            <div className="mail-section">
+            <div 
+              className="mail-section hover-component"
+              onMouseEnter={() => handleMouseEnter('mail-section')}
+              onMouseLeave={handleMouseLeave}
+              onClick={() => handleClick('mail-section')}
+            >
               <h2 className="mail-text">MAIL</h2>
+              {renderOptionsMenu('mail-section')}
             </div>
           </div>
         </div>
       </div>
+
+    {/* Modals */}
+        {showSendMail && (
+          <SendMail 
+            currentUser={currentUser}
+            onClose={handleCloseSendMail}
+            onSend={handleSendMailSuccess}
+          />
+        )}
+        
+        {showInbox && (
+          <Inbox 
+            currentUser={currentUser}
+            onClose={handleCloseInbox}
+          />
+        )}
+    </>
     );
   }
 }

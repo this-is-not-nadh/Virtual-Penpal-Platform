@@ -3,7 +3,6 @@ import './App.css';
 import MainMenu from './pages/MainMenu.jsx';
 
 // The main App component handles the state of the landing page,
-// switching between the initial message, the login form, and the logged-in view.
 export default function App() {
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
