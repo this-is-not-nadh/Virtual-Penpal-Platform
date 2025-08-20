@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './Inbox.css';
 
-// API configuration - replace with your Cloudflare Workers endpoint
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api';
+// Your Cloudflare Worker API URL
+const API_BASE_URL = 'https://mail-system-api.nadhinanutshell.workers.dev/api';
 
 export default function Inbox({ currentUser, onClose }) {
   const [mails, setMails] = useState([]);
@@ -27,8 +27,6 @@ export default function Inbox({ currentUser, onClose }) {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          // Add authentication headers if needed
-          // 'Authorization': `Bearer ${currentUser.token}`
         },
       });
 
@@ -232,7 +230,9 @@ export default function Inbox({ currentUser, onClose }) {
               className="close-button"
               onClick={onClose}
             >
-              ✕
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#222226" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
           </div>
         </div>
@@ -246,7 +246,7 @@ export default function Inbox({ currentUser, onClose }) {
                   className="back-button"
                   onClick={() => setSelectedMail(null)}
                 >
-                  ← Back to Inbox
+                  Back to Inbox
                 </button>
                 <button 
                   className="delete-button"

@@ -6,8 +6,8 @@ compatibility_flags = ["nodejs_compat"]
 # KV Namespace for storing mail data
 [[kv_namespaces]]
 binding = "MAIL_STORAGE"
-preview_id = "your-preview-kv-namespace-id"
-id = "your-production-kv-namespace-id"
+preview_id = "070b803c8c964a14a73c181d3e8d33b0"
+id = "16a6bf29a0604f2383d3e6197f7ed61a"
 
 # Environment variables (optional)
 [vars]

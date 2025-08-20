@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './SendMail.css';
 
-// API configuration - replace with your Cloudflare Workers endpoint
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api';
+// Your Cloudflare Worker API URL
+const API_BASE_URL = 'https://mail-system-api.nadhinanutshell.workers.dev/api';
 
 export default function SendMail({ currentUser, onClose, onSend }) {
   const [mailData, setMailData] = useState({
