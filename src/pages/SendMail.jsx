@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './SendMail.css';
 
-// System currently only works on local machine for UI testing purposes & testing.
-// You need to rewrite this code for Cloudflare deployment
+// API configuration - replace with your Cloudflare Workers endpoint
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api';
+
 export default function SendMail({ currentUser, onClose, onSend }) {
   const [mailData, setMailData] = useState({
     recipient: '',
@@ -12,12 +13,46 @@ export default function SendMail({ currentUser, onClose, onSend }) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
-  // Available users for recipient selection
-  const availableUsers = [
-    { username: 'Q38', name: 'Nate' },
-    { username: 'Q09', name: 'Nadh' }
-  ].filter(user => user.username !== currentUser.username);
+  // Load available users on component mount
+  useEffect(() => {
+    loadAvailableUsers();
+  }, [currentUser.username]);
+
+  // Load available users from API
+  const loadAvailableUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/users`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load users');
+      }
+
+      const data = await response.json();
+      
+      // Filter out current user from the list
+      const filteredUsers = data.users.filter(user => user.username !== currentUser.username);
+      setAvailableUsers(filteredUsers);
+      
+    } catch (error) {
+      console.error('Error loading users:', error);
+      // Fallback to hardcoded users if API fails
+      setAvailableUsers([
+        { username: 'Q38', name: 'Nate' },
+        { username: 'Q09', name: 'Nadh' }
+      ].filter(user => user.username !== currentUser.username));
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   // Handle input changes
   const handleInputChange = (field, value) => {
@@ -60,37 +95,39 @@ export default function SendMail({ currentUser, onClose, onSend }) {
     if (!validateForm()) return;
     
     setIsLoading(true);
+    setErrors({});
     
     try {
       // Create mail object
       const mailObject = {
-        id: Date.now().toString(),
         from: currentUser.username,
         to: mailData.recipient,
         subject: mailData.subject,
         message: mailData.message,
         priority: mailData.priority,
-        timestamp: new Date().toISOString(),
-        isRead: false
       };
       
-      // Get existing mails from localStorage
-      const existingMails = JSON.parse(localStorage.getItem('mailbox_messages') || '[]');
+      // Send mail via API
+      const response = await fetch(`${API_BASE_URL}/mails`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(mailObject)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send mail');
+      }
+
+      const result = await response.json();
       
-      // Add new mail
-      const updatedMails = [...existingMails, mailObject];
-      
-      // Save to localStorage
-      localStorage.setItem('mailbox_messages', JSON.stringify(updatedMails));
-      
-      // Simulate sending delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log('Mail sent successfully:', mailObject);
+      console.log('Mail sent successfully:', result);
       
       // Call parent component's send handler if provided
       if (onSend) {
-        onSend(mailObject);
+        onSend(result.mail);
       }
       
       // Reset form
@@ -111,7 +148,7 @@ export default function SendMail({ currentUser, onClose, onSend }) {
       
     } catch (error) {
       console.error('Failed to send mail:', error);
-      setErrors({ general: 'Failed to send mail. Please try again.' });
+      setErrors({ general: error.message || 'Failed to send mail. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -144,20 +181,24 @@ export default function SendMail({ currentUser, onClose, onSend }) {
           {/* Recipient */}
           <div className="form-group">
             <label htmlFor="recipient">To:</label>
-            <select
-              id="recipient"
-              value={mailData.recipient}
-              onChange={(e) => handleInputChange('recipient', e.target.value)}
-              className={errors.recipient ? 'error' : ''}
-              disabled={isLoading}
-            >
-              <option value="">Select recipient</option>
-              {availableUsers.map(user => (
-                <option key={user.username} value={user.username}>
-                  {user.username} ({user.name})
-                </option>
-              ))}
-            </select>
+            {loadingUsers ? (
+              <div className="loading-users">Loading users...</div>
+            ) : (
+              <select
+                id="recipient"
+                value={mailData.recipient}
+                onChange={(e) => handleInputChange('recipient', e.target.value)}
+                className={errors.recipient ? 'error' : ''}
+                disabled={isLoading}
+              >
+                <option value="">Select recipient</option>
+                {availableUsers.map(user => (
+                  <option key={user.username} value={user.username}>
+                    {user.username} ({user.name})
+                  </option>
+                ))}
+              </select>
+            )}
             {errors.recipient && (
               <span className="error-message">{errors.recipient}</span>
             )}
@@ -224,7 +265,7 @@ export default function SendMail({ currentUser, onClose, onSend }) {
               type="button"
               className="send-button"
               onClick={handleSendMail}
-              disabled={isLoading}
+              disabled={isLoading || loadingUsers}
             >
               {isLoading ? (
                 <span>

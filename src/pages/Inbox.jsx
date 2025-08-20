@@ -1,79 +1,121 @@
 import React, { useState, useEffect } from 'react';
 import './Inbox.css';
 
-// System currently only works on local machine for UI testing purposes & testing.
-// You need to rewrite this code for Cloudflare deployment
+// API configuration - replace with your Cloudflare Workers endpoint
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api';
+
 export default function Inbox({ currentUser, onClose }) {
   const [mails, setMails] = useState([]);
   const [selectedMail, setSelectedMail] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmCallback, setConfirmCallback] = useState(null);
 
-  // Load mails on component mount
+  // Load mails on component mount or when the user changes
   useEffect(() => {
     loadMails();
   }, [currentUser.username]);
 
-  // Load mails from localStorage
-  const loadMails = () => {
+  // Load mails from API
+  const loadMails = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
-      const allMails = JSON.parse(localStorage.getItem('mailbox_messages') || '[]');
+      const response = await fetch(`${API_BASE_URL}/mails/${currentUser.username}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add authentication headers if needed
+          // 'Authorization': `Bearer ${currentUser.token}`
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load mails: ${response.statusText}`);
+      }
+
+      const data = await response.json();
       
-      // Filter mails for current user
-      const userMails = allMails
-        .filter(mail => mail.to === currentUser.username)
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      // Sort mails by timestamp (newest first)
+      const sortedMails = data.mails.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      setMails(sortedMails);
       
-      setMails(userMails);
     } catch (error) {
       console.error('Error loading mails:', error);
+      setError('Failed to load mails. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Mark mail as read
-  const markAsRead = (mailId) => {
+  // Mark a specific mail as read
+  const markAsRead = async (mailId) => {
     try {
-      const allMails = JSON.parse(localStorage.getItem('mailbox_messages') || '[]');
-      const updatedMails = allMails.map(mail => 
-        mail.id === mailId ? { ...mail, isRead: true } : mail
-      );
-      
-      localStorage.setItem('mailbox_messages', JSON.stringify(updatedMails));
-      
-      // Update local state
+      const response = await fetch(`${API_BASE_URL}/mails/${mailId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: currentUser.username
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark mail as read');
+      }
+
+      // Update local state to reflect the change
       setMails(prev => prev.map(mail => 
         mail.id === mailId ? { ...mail, isRead: true } : mail
       ));
+      
     } catch (error) {
       console.error('Error marking mail as read:', error);
+      // Optionally show user notification
     }
   };
 
-  // Delete mail
-  const deleteMail = (mailId) => {
-    if (window.confirm('Are you sure you want to delete this mail?')) {
+  // Delete a specific mail after user confirmation
+  const deleteMail = async (mailId) => {
+    // Show the custom confirmation modal
+    setShowConfirm(true);
+    setConfirmCallback(() => async () => {
       try {
-        const allMails = JSON.parse(localStorage.getItem('mailbox_messages') || '[]');
-        const updatedMails = allMails.filter(mail => mail.id !== mailId);
-        
-        localStorage.setItem('mailbox_messages', JSON.stringify(updatedMails));
-        
-        // Update local state
+        const response = await fetch(`${API_BASE_URL}/mails/${mailId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: currentUser.username
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete mail');
+        }
+
+        // Update local state and close detail view if the selected mail was deleted
         setMails(prev => prev.filter(mail => mail.id !== mailId));
         
-        // Close selected mail if it was deleted
         if (selectedMail && selectedMail.id === mailId) {
           setSelectedMail(null);
         }
+        
       } catch (error) {
         console.error('Error deleting mail:', error);
+        setError('Failed to delete mail. Please try again.');
+      } finally {
+        setShowConfirm(false);
+        setConfirmCallback(null);
       }
-    }
+    });
   };
 
-  // Handle mail selection
+  // Handle mail selection, marking it as read if it's new
   const handleMailSelect = (mail) => {
     setSelectedMail(mail);
     if (!mail.isRead) {
@@ -81,7 +123,7 @@ export default function Inbox({ currentUser, onClose }) {
     }
   };
 
-  // Format timestamp
+  // Format the mail's timestamp into a readable string
   const formatTimestamp = (timestamp) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -101,7 +143,7 @@ export default function Inbox({ currentUser, onClose }) {
     }
   };
 
-  // Get priority badge
+  // Get a priority badge based on the mail's priority level
   const getPriorityBadge = (priority) => {
     const badges = {
       low: { color: '#28a745', text: 'LOW' },
@@ -120,7 +162,21 @@ export default function Inbox({ currentUser, onClose }) {
       </span>
     );
   };
+  
+  // Custom Confirmation Modal Component
+  const ConfirmationModal = () => (
+    <div className="confirm-overlay">
+      <div className="confirm-modal">
+        <p>Are you sure you want to delete this mail?</p>
+        <div className="confirm-actions">
+          <button className="confirm-cancel" onClick={() => setShowConfirm(false)}>Cancel</button>
+          <button className="confirm-delete" onClick={confirmCallback}>Delete</button>
+        </div>
+      </div>
+    </div>
+  );
 
+  // Display a loading spinner while fetching mails
   if (loading) {
     return (
       <div className="inbox-overlay">
@@ -134,10 +190,30 @@ export default function Inbox({ currentUser, onClose }) {
     );
   }
 
+  // Display error state
+  if (error) {
+    return (
+      <div className="inbox-overlay">
+        <div className="inbox-modal">
+          <div className="inbox-header">
+            <h2>Inbox</h2>
+            <button className="close-button" onClick={onClose}>✕</button>
+          </div>
+          <div className="error-container">
+            <p>{error}</p>
+            <button onClick={loadMails} className="retry-button">
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="inbox-overlay">
       <div className="inbox-modal">
-        {/* Header */}
+        {/* Header section with title and action buttons */}
         <div className="inbox-header">
           <h2>
             Inbox ({mails.filter(mail => !mail.isRead).length} unread)
@@ -148,7 +224,7 @@ export default function Inbox({ currentUser, onClose }) {
               onClick={loadMails}
               title="Refresh"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#222226" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.2"/>
               </svg>
             </button>
@@ -200,7 +276,7 @@ export default function Inbox({ currentUser, onClose }) {
             <div className="mail-list">
               {mails.length === 0 ? (
                 <div className="empty-inbox">
-                  <h3>📭 Your inbox is empty</h3>
+                  <h3>Your inbox is empty</h3>
                   <p>No messages to display.</p>
                 </div>
               ) : (
@@ -233,6 +309,7 @@ export default function Inbox({ currentUser, onClose }) {
           )}
         </div>
       </div>
+      {showConfirm && <ConfirmationModal />}
     </div>
   );
 }

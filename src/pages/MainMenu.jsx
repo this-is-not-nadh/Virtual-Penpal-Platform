@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import './MainMenu.css';
 import SendMail from './SendMail';
 import Inbox from './Inbox';
-import './MainMenu.css';
+
+// API configuration - replace with your Cloudflare Workers endpoint
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api';
 
 export default function MainMenu({ currentUser }) {
   const [hoveredComponent, setHoveredComponent] = useState(null);
@@ -10,23 +12,38 @@ export default function MainMenu({ currentUser }) {
   const [showSendMail, setShowSendMail] = useState(false);
   const [showInbox, setShowInbox] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isCheckingUnread, setIsCheckingUnread] = useState(false);
 
   useEffect(() => {
     checkUnreadMessages();
-    const interval = setInterval(checkUnreadMessages, 5000); // Check every 5 seconds
+    const interval = setInterval(checkUnreadMessages, 10000); // Check every 10 seconds (reduced frequency for API calls)
     return () => clearInterval(interval);
   }, [currentUser.username]);
 
-  // Check unread messages count
-  const checkUnreadMessages = () => {
+  // Check unread messages count via API
+  const checkUnreadMessages = async () => {
+    if (isCheckingUnread) return; // Prevent concurrent requests
+    
+    setIsCheckingUnread(true);
     try {
-      const allMails = JSON.parse(localStorage.getItem('mailbox_messages') || '[]');
-      const unreadMails = allMails.filter(mail => 
-        mail.to === currentUser.username && !mail.isRead
-      );
-      setUnreadCount(unreadMails.length);
+      const response = await fetch(`${API_BASE_URL}/mails/${currentUser.username}/unread-count`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadCount(data.unreadCount || 0);
+      } else {
+        console.error('Failed to fetch unread count:', response.statusText);
+      }
     } catch (error) {
       console.error('Error checking unread messages:', error);
+      // Don't update unread count on error to avoid showing incorrect information
+    } finally {
+      setIsCheckingUnread(false);
     }
   };
 
@@ -90,6 +107,8 @@ export default function MainMenu({ currentUser }) {
   // Handle send mail success
   const handleSendMailSuccess = (mailData) => {
     console.log('Mail sent:', mailData);
+    // Refresh unread count as it might affect the sender's view
+    checkUnreadMessages();
   };
 
   // Handle close modals
@@ -141,7 +160,7 @@ export default function MainMenu({ currentUser }) {
     );
   };
 
-// Render unread notification badge
+  // Render unread notification badge
   const renderUnreadBadge = () => {
     if (unreadCount === 0) return null;
     
@@ -152,52 +171,52 @@ export default function MainMenu({ currentUser }) {
     );
   };
 
-
   // Checks the user with 'if' statements.
   if (currentUser.username === 'Q38') {
     return (
-    <>
-      {/* View for user Q38 */}
-      <div className="q38-main-container">
-        <div className="instruction-text">
-          {/* Write Up */}
-          <p className="q38-instruction-paragraph">
-            Hover on the mailbox to access different features.
-          </p>
-        </div>
-        <div className="mailbox-container">
-          {/* Mailbox Curve */}
-          <div className="mailbox-top"></div>
-          
-          {/* Mailbox Body */}
-          <div className="mailbox-body">
-            {/* Mail Slot */}
-            <div 
-              className="mail-slot hover-component"
-              onMouseEnter={() => handleMouseEnter('mail-slot')}
-              onMouseLeave={handleMouseLeave}
-              onClick={() => handleClick('mail-slot')}
-            >
-              {renderOptionsMenu('mail-slot')}
-            </div>
+      <>
+        {/* View for user Q38 */}
+        <div className="q38-main-container">
+          <div className="instruction-text">
+            {/* Write Up */}
+            <p className="q38-instruction-paragraph">
+              Hover on the mailbox to access different features.
+            </p>
+          </div>
+          <div className="mailbox-container">
+            {/* Mailbox Curve */}
+            <div className="mailbox-top"></div>
             
-            {/* Mail Section */}
-            <div 
-              className="mail-section hover-component"
-              onMouseEnter={() => handleMouseEnter('mail-section')}
-              onMouseLeave={handleMouseLeave}
-              onClick={() => handleClick('mail-section')}
-            >
-              <h2 className="mail-text">MAIL</h2>
-              {renderOptionsMenu('mail-section')}
+            {/* Mailbox Body */}
+            <div className="mailbox-body">
+              {/* Mail Slot */}
+              <div 
+                className="mail-slot hover-component"
+                onMouseEnter={() => handleMouseEnter('mail-slot')}
+                onMouseLeave={handleMouseLeave}
+                onClick={() => handleClick('mail-slot')}
+              >
+                {renderOptionsMenu('mail-slot')}
+              </div>
+              
+              {/* Mail Section */}
+              <div 
+                className="mail-section hover-component"
+                onMouseEnter={() => handleMouseEnter('mail-section')}
+                onMouseLeave={handleMouseLeave}
+                onClick={() => handleClick('mail-section')}
+              >
+                <h2 className="mail-text">MAIL</h2>
+                {renderUnreadBadge()}
+                {renderOptionsMenu('mail-section')}
+              </div>
+              
+              {renderOptionsMenu('mailbox-body')}
             </div>
-            
-            {renderOptionsMenu('mailbox-body')}
           </div>
         </div>
-      </div>
 
-      {/* Modals */}
+        {/* Modals */}
         {showSendMail && (
           <SendMail 
             currentUser={currentUser}
@@ -212,54 +231,53 @@ export default function MainMenu({ currentUser }) {
             onClose={handleCloseInbox}
           />
         )}
-    </>
+      </>
     );
   }
  
   else {
     return (
       <>
-      {/* View for user Q09 */}
-      <div className="q09-main-container">
-        <div className="instruction-text">
-          {/* Write Up */}
-          <p className="q09-instruction-paragraph">
-            Hover on the mailbox to access different features.
-          </p>
-        </div>
-        <div className="mailbox-container">
-          {/* Mailbox Curve */}
-          <div className="mailbox-top"></div>
-          
-          {/* Mailbox Body */}
-          <div 
-            className="mailbox-body">
-
-            {/* Mail Slot */}
-            <div 
-              className="mail-slot hover-component"
-              onMouseEnter={() => handleMouseEnter('mail-slot')}
-              onMouseLeave={handleMouseLeave}
-              onClick={() => handleClick('mail-slot')}
-            >
-              {renderOptionsMenu('mail-slot')}
-            </div>
+        {/* View for user Q09 */}
+        <div className="q09-main-container">
+          <div className="instruction-text">
+            {/* Write Up */}
+            <p className="q09-instruction-paragraph">
+              Hover on the mailbox to access different features.
+            </p>
+          </div>
+          <div className="mailbox-container">
+            {/* Mailbox Curve */}
+            <div className="mailbox-top"></div>
             
-            {/* Mail Section */}
-            <div 
-              className="mail-section hover-component"
-              onMouseEnter={() => handleMouseEnter('mail-section')}
-              onMouseLeave={handleMouseLeave}
-              onClick={() => handleClick('mail-section')}
-            >
-              <h2 className="mail-text">MAIL</h2>
-              {renderOptionsMenu('mail-section')}
+            {/* Mailbox Body */}
+            <div className="mailbox-body">
+              {/* Mail Slot */}
+              <div 
+                className="mail-slot hover-component"
+                onMouseEnter={() => handleMouseEnter('mail-slot')}
+                onMouseLeave={handleMouseLeave}
+                onClick={() => handleClick('mail-slot')}
+              >
+                {renderOptionsMenu('mail-slot')}
+              </div>
+              
+              {/* Mail Section */}
+              <div 
+                className="mail-section hover-component"
+                onMouseEnter={() => handleMouseEnter('mail-section')}
+                onMouseLeave={handleMouseLeave}
+                onClick={() => handleClick('mail-section')}
+              >
+                <h2 className="mail-text">MAIL</h2>
+                {renderUnreadBadge()}
+                {renderOptionsMenu('mail-section')}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-    {/* Modals */}
+        {/* Modals */}
         {showSendMail && (
           <SendMail 
             currentUser={currentUser}
@@ -274,7 +292,7 @@ export default function MainMenu({ currentUser }) {
             onClose={handleCloseInbox}
           />
         )}
-    </>
+      </>
     );
   }
 }
