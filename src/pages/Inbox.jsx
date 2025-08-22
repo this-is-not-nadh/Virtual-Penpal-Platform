@@ -141,6 +141,18 @@ export default function Inbox({ currentUser, onClose }) {
     }
   };
 
+  // Format message content to handle line breaks
+  const formatMessageContent = (message) => {
+  return message
+    .split('\n')
+    .map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        {index < message.split('\n').length - 1 && <br />}
+      </React.Fragment>
+    ));
+};
+
   // Get a priority badge based on the mail's priority level
   const getPriorityBadge = (priority) => {
     const badges = {
@@ -267,7 +279,7 @@ export default function Inbox({ currentUser, onClose }) {
                 </div>
                 
                 <div className="mail-body">
-                  {selectedMail.message}
+                  {formatMessageContent(selectedMail.message)}
                 </div>
               </div>
             </div>
@@ -297,7 +309,7 @@ export default function Inbox({ currentUser, onClose }) {
                     </div>
                     
                     <div className="mail-item-preview">
-                      {mail.message.substring(0, 100)}
+                      {mail.message.replace(/\n/g, ' ').substring(0, 100)}
                       {mail.message.length > 100 ? '...' : ''}
                     </div>
                     
