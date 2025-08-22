@@ -1,45 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './MainMenu.css';
 import Inbox from './Inbox';
 import SendMail from './SendMail';
 
-export default function MainMenu({ currentUser }) {
+// Cloudflare Worker API URL
+const API_BASE_URL = 'https://mail-system-api.nadhinanutshell.workers.dev/api';
+
+// This component now accepts currentUser and onLogout as props from App.jsx
+export default function MainMenu({ currentUser, onLogout }) {
+  // All login-related state and functions have been removed
+  // The component now relies on the currentUser prop from App.jsx
   const [showInbox, setShowInbox] = useState(false);
   const [showSendMail, setShowSendMail] = useState(false);
-  const [activeMenu, setActiveMenu] = useState(null);
+  const [showSlotOptions, setShowSlotOptions] = useState(false);
+  const [showMailOptions, setShowMailOptions] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  
-  const menuRef = useRef(null);
+  const [loading, setLoading] = useState(false);
 
-  // API base URL
-  const API_BASE_URL = 'https://mail-system-api.nadhinanutshell.workers.dev/api';
-
-  // Close menu when clicking outside
+  // Load unread count when user changes
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setActiveMenu(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  // Load unread count on component mount and periodically
-  useEffect(() => {
-    loadUnreadCount();
-    
-    // Refresh unread count every 30 seconds
-    const interval = setInterval(loadUnreadCount, 30000);
-    
-    return () => clearInterval(interval);
-  }, [currentUser.username]);
+    // Check if a user is logged in before fetching data
+    if (currentUser) {
+      loadUnreadCount();
+      // Set up interval to refresh unread count every 30 seconds
+      const interval = setInterval(loadUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUser]);
 
   // Load unread mail count
   const loadUnreadCount = async () => {
+    // This check is redundant now but good practice
+    if (!currentUser) return; 
+    
     try {
       const response = await fetch(`${API_BASE_URL}/mails/${currentUser.username}`, {
         method: 'GET',
@@ -55,105 +48,161 @@ export default function MainMenu({ currentUser }) {
       }
     } catch (error) {
       console.error('Error loading unread count:', error);
+      // Silently fail for unread count
     }
   };
 
-  // Handle menu toggle
-  const handleMenuToggle = (menuType) => {
-    setActiveMenu(activeMenu === menuType ? null : menuType);
+  // Handle mail slot click
+  const handleSlotClick = () => {
+    setShowSlotOptions(!showSlotOptions);
+    setShowMailOptions(false);
   };
 
-  // Handle inbox open
+  // Handle mail section click
+  const handleMailClick = () => {
+    setShowMailOptions(!showMailOptions);
+    setShowSlotOptions(false);
+  };
+
+  // Handle opening inbox
   const handleOpenInbox = () => {
     setShowInbox(true);
-    setActiveMenu(null);
+    setShowSlotOptions(false);
+    setShowMailOptions(false);
   };
 
-  // Handle send mail open
+  // Handle opening send mail
   const handleOpenSendMail = () => {
     setShowSendMail(true);
-    setActiveMenu(null);
+    setShowSlotOptions(false);
+    setShowMailOptions(false);
   };
 
-  // Handle inbox close
-  const handleInboxClose = () => {
+  // Handle closing inbox
+  const handleCloseInbox = () => {
     setShowInbox(false);
-    loadUnreadCount(); // Refresh unread count when inbox closes
+    loadUnreadCount(); // Refresh unread count when closing inbox
   };
 
-  // Handle send mail close
-  const handleSendMailClose = () => {
+  // Handle closing send mail
+  const handleCloseSendMail = () => {
     setShowSendMail(false);
   };
 
-  // Handle mail sent (refresh unread count)
-  const handleMailSent = (newMail) => {
-    console.log('Mail sent:', newMail);
-    // Optionally refresh unread count or show success message
+  // Handle mail sent successfully
+  const handleMailSent = (sentMail) => {
+    console.log('Mail sent:', sentMail);
+    loadUnreadCount();
+  };
+
+  // Handle clicking outside to close options
+  const handleClickOutside = () => {
+    setShowSlotOptions(false);
+    setShowMailOptions(false);
   };
 
   // Get container class based on user
   const getContainerClass = () => {
-    return currentUser.username === 'Q38' ? 'q38-main-container' : 'q09-main-container';
+    // Check the username directly to determine the theme
+    if (!currentUser) return 'q38-main-container';
+    return currentUser.username === 'Q09' ? 'q09-main-container' : 'q38-main-container';
   };
 
   // Get instruction class based on user
   const getInstructionClass = () => {
-    return currentUser.username === 'Q38' ? 'q38-instruction-paragraph' : 'q09-instruction-paragraph';
+    // Use the currentUser prop to determine the theme
+    if (!currentUser) return 'q38-instruction-paragraph';
+    return currentUser.username === 'Q09' ? 'q09-instruction-paragraph' : 'q38-instruction-paragraph';
   };
 
-  return (
-    <div className={getContainerClass()}>
-      <p className={getInstructionClass()}>
-        Welcome {currentUser.name}! Click on different parts of the mailbox to access options.
-      </p>
-      
-      <div className="mailbox-container" ref={menuRef}>
-        {/* Mailbox Top */}
-        <div className="mailbox-top hover-component">
-          {/* No functionality for top section */}
+  // Get user-specific welcome message
+  const getWelcomeMessage = () => {
+    if (!currentUser) return '';
+    
+    if (currentUser.username === 'Q09') {
+      return `Welcome back, ${currentUser.name}! Click on different parts of the mailbox to access your mail system.`;
+    } else {
+      return `Welcome back, ${currentUser.name}! Click on different parts of the mailbox to access your mail system.`;
+    }
+  };
+
+  // The loading screen is now only relevant if we are fetching data
+  if (loading) {
+    return (
+      <div className={getContainerClass()}>
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p className={getInstructionClass()}>Loading...</p>
         </div>
-        
-        {/* Mailbox Body */}
+      </div>
+    );
+  }
+
+  // The main application screen is only rendered if a user is logged in
+  if (!currentUser) {
+    return null; // Don't render anything if no user is logged in
+  }
+
+  return (
+    <div className={getContainerClass()} onClick={handleClickOutside}>
+      <p className={getInstructionClass()}>
+        {getWelcomeMessage()}
+      </p>
+
+      <div className="mailbox-container">
+        {/* Mailbox top (curved dome) */}
+        <div className="mailbox-top no-hover"></div>
+        {/* Mailbox body */}
         <div className="mailbox-body">
-          {/* Mail Slot */}
+          {/* Mail slot - for composing/sending mail */}
           <div 
-            className="mail-slot hover-component"
-            onClick={() => handleMenuToggle('slot')}
+            className="mail-slot hover-component" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSlotClick();
+            }}
           >
-            {activeMenu === 'slot' && (
+            {showSlotOptions && (
               <div className="options-menu">
                 <button 
                   className="option-button"
-                  onClick={handleOpenSendMail}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenSendMail();
+                  }}
                 >
-                  Send Mail
+                  Compose Mail
                 </button>
               </div>
             )}
           </div>
-          
-          {/* Mail Section */}
+
+          {/* Mail section - for viewing inbox */}
           <div 
             className="mail-section hover-component"
-            onClick={() => handleMenuToggle('section')}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMailClick();
+            }}
           >
-            <h2 className="mail-text">MAIL</h2>
-            
-            {/* Unread count indicator */}
-            {unreadCount > 0 && (
-              <div className="unread-badge">
-                {unreadCount}
-              </div>
-            )}
-            
-            {activeMenu === 'section' && (
+            <h3 className="mail-text">
+              MAIL
+              {unreadCount > 0 && (
+                <span className="unread-badge">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </h3>
+            {showMailOptions && (
               <div className="options-menu">
                 <button 
                   className="option-button"
-                  onClick={handleOpenInbox}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenInbox();
+                  }}
                 >
-                  Open Inbox {unreadCount > 0 && `(${unreadCount})`}
+                  View Inbox ({unreadCount} unread)
                 </button>
               </div>
             )}
@@ -161,18 +210,18 @@ export default function MainMenu({ currentUser }) {
         </div>
       </div>
 
-      {/* Modal Components */}
+      {/* Render modals */}
       {showInbox && (
         <Inbox 
-          currentUser={currentUser}
-          onClose={handleInboxClose}
+          currentUser={currentUser} 
+          onClose={handleCloseInbox} 
         />
       )}
-      
+
       {showSendMail && (
         <SendMail 
-          currentUser={currentUser}
-          onClose={handleSendMailClose}
+          currentUser={currentUser} 
+          onClose={handleCloseSendMail}
           onSend={handleMailSent}
         />
       )}

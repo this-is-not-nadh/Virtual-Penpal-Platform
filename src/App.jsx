@@ -82,8 +82,8 @@ function LoginForm({ onLoginSuccess }) {
 
   // Hardcoded credentials (placeholder for now; might be permanent if I'm lazy)
   const validCredentials = [
-    { username: 'Q38', password: 'Sunshine' },
-    { username: 'Q09', password: 'Moonlight' }
+    { username: 'Q38', password: 'Sunshine', name: 'Nate' },
+    { username: 'Q09', password: 'Moonlight', name: 'Nadh'}
   ];
 
   // Handles the login button click.
